@@ -1,1 +1,429 @@
 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Draw Battle</title>
+
+<style>
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: #10111c;
+  color: white;
+  font-family: Arial, sans-serif;
+}
+
+header {
+  background: #191b2b;
+  padding: 18px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 2px solid #30334b;
+}
+
+.logo {
+  font-size: 25px;
+  font-weight: bold;
+  color: #a78bfa;
+}
+
+.owner {
+  background: #facc15;
+  color: black;
+  padding: 5px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.container {
+  max-width: 1100px;
+  margin: auto;
+  padding: 20px;
+}
+
+.panel {
+  background: #1b1d2d;
+  padding: 20px;
+  border-radius: 15px;
+  margin-bottom: 20px;
+}
+
+input, button {
+  padding: 12px;
+  border-radius: 8px;
+  border: none;
+  font-size: 15px;
+}
+
+input {
+  background: #30334b;
+  color: white;
+}
+
+button {
+  background: #8b5cf6;
+  color: white;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+button:hover {
+  background: #7042d5;
+}
+
+.game {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 20px;
+}
+
+canvas {
+  background: white;
+  width: 100%;
+  height: 350px;
+  border-radius: 10px;
+  touch-action: none;
+  cursor: crosshair;
+}
+
+.chat {
+  height: 250px;
+  overflow-y: auto;
+  background: #10111c;
+  padding: 10px;
+  border-radius: 8px;
+  margin-bottom: 10px;
+}
+
+.chat p {
+  margin: 8px 0;
+  overflow-wrap: anywhere;
+}
+
+.timer {
+  font-size: 30px;
+  color: #facc15;
+  font-weight: bold;
+}
+
+.players {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.player {
+  background: #30334b;
+  padding: 10px;
+  border-radius: 8px;
+}
+
+#gameArea {
+  display: none;
+}
+
+@media(max-width:750px) {
+  .game {
+    grid-template-columns: 1fr;
+  }
+}
+</style>
+</head>
+
+<body>
+
+<header>
+  <div class="logo">DRAW BATTLE</div>
+  <div id="ownerTag"></div>
+</header>
+
+<div class="container">
+
+<div class="panel">
+  <h2>Welcome to Draw Battle</h2>
+  <p>Draw the word before time runs out and beat everyone!</p>
+
+  <input id="username" placeholder="Enter your username">
+  <button onclick="joinGame()">Join Game</button>
+
+  <p id="status">Waiting to join...</p>
+</div>
+
+<div id="gameArea">
+
+<div class="panel">
+  <h2>Players</h2>
+  <div class="players" id="players"></div>
+</div>
+
+<div class="game">
+
+<div class="panel">
+  <h2>Drawing Arena</h2>
+
+  <div class="timer" id="timer">60</div>
+  <h3 id="word">Waiting for round...</h3>
+
+  <canvas id="canvas" width="800" height="400"></canvas>
+
+  <br><br>
+
+  <button onclick="clearCanvas()">Clear</button>
+  <button onclick="nextRound()">Next Round</button>
+</div>
+
+<div class="panel">
+  <h2>Live Chat</h2>
+
+  <div class="chat" id="chat"></div>
+
+  <input id="guess" placeholder="Guess the drawing..." style="width:100%">
+  <br><br>
+  <button onclick="sendGuess()" style="width:100%">Send Guess</button>
+</div>
+
+</div>
+</div>
+</div>
+
+<script>
+const OWNER_NAME = "YOUR_USERNAME";
+
+const words = [
+  "Dragon", "Pizza", "Dog", "Car",
+  "Rocket", "Apple", "House", "Cat",
+  "Rainbow", "Football", "Shark",
+  "Airplane", "Computer", "Guitar",
+  "Pencil", "Elephant"
+];
+
+let players = [];
+let currentPlayer = 0;
+let currentWord = "";
+let time = 60;
+let timerInterval;
+let roundActive = false;
+
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+
+let drawing = false;
+
+function joinGame() {
+  const name = document.getElementById("username").value.trim();
+
+  if (!name) {
+    alert("Enter a username first!");
+    return;
+  }
+
+  if (players.some(p => p.name.toLowerCase() === name.toLowerCase())) {
+    alert("Username already taken!");
+    return;
+  }
+
+  const player = {
+    name: name,
+    score: 0
+  };
+
+  players.push(player);
+
+  if (name.toLowerCase() === OWNER_NAME.toLowerCase()) {
+    document.getElementById("ownerTag").innerHTML =
+      '<span class="owner">👑 OWNER</span>';
+  }
+
+  document.getElementById("gameArea").style.display = "block";
+  document.getElementById("status").innerText = "Joined successfully!";
+
+  updatePlayers();
+  addMessage(name + " joined the game!");
+
+  if (players.length === 1) {
+    startRound();
+  }
+}
+
+function updatePlayers() {
+  const container = document.getElementById("players");
+  container.innerHTML = "";
+
+  players.forEach((player, index) => {
+    const div = document.createElement("div");
+    div.className = "player";
+
+    const isOwner = player.name.toLowerCase() ===
+      OWNER_NAME.toLowerCase();
+
+    div.textContent =
+      player.name + (isOwner ? " 👑 OWNER" : "") +
+      " | " + player.score + " pts";
+
+    container.appendChild(div);
+  });
+}
+
+function addMessage(message) {
+  const chat = document.getElementById("chat");
+  const p = document.createElement("p");
+  p.textContent = message;
+  chat.appendChild(p);
+  chat.scrollTop = chat.scrollHeight;
+}
+
+function startRound() {
+  clearInterval(timerInterval);
+
+  if (players.length === 0) return;
+
+  roundActive = true;
+  time = 60;
+
+  currentPlayer = currentPlayer % players.length;
+
+  currentWord = words[Math.floor(Math.random() * words.length)];
+
+  document.getElementById("word").innerText =
+    players[currentPlayer].name + " is drawing!";
+
+  document.getElementById("timer").innerText = time;
+
+  clearCanvas();
+
+  addMessage(players[currentPlayer].name + " is now drawing!");
+
+  timerInterval = setInterval(() => {
+    time--;
+    document.getElementById("timer").innerText = time;
+
+    if (time <= 0) {
+      endRound();
+    }
+  }, 1000);
+}
+
+function endRound() {
+  clearInterval(timerInterval);
+  roundActive = false;
+
+  document.getElementById("word").innerText =
+    "The word was: " + currentWord;
+
+  addMessage("Round ended! The word was " + currentWord);
+}
+
+function nextRound() {
+  if (players.length === 0) return;
+
+  if (roundActive) {
+    clearInterval(timerInterval);
+    roundActive = false;
+  }
+
+  currentPlayer++;
+  startRound();
+}
+
+function sendGuess() {
+  const input = document.getElementById("guess");
+  const guess = input.value.trim();
+
+  if (!guess || !roundActive) return;
+
+  const playerName = document.getElementById("username").value.trim();
+
+  if (playerName.toLowerCase() ===
+      players[currentPlayer].name.toLowerCase()) {
+    addMessage("The drawer cannot guess their own word!");
+    input.value = "";
+    return;
+  }
+
+  if (guess.toLowerCase() === currentWord.toLowerCase()) {
+    const player = players.find(p =>
+      p.name.toLowerCase() === playerName.toLowerCase()
+    );
+
+    if (player) {
+      player.score += 10;
+      updatePlayers();
+    }
+
+    addMessage(playerName + " guessed correctly! +10 points");
+    endRound();
+  } else {
+    addMessage(playerName + ": " + guess);
+  }
+
+  input.value = "";
+}
+
+function clearCanvas() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = "white";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+}
+
+canvas.addEventListener("pointerdown", e => {
+  if (!roundActive) return;
+
+  const playerName = document.getElementById("username").value.trim();
+
+  if (playerName.toLowerCase() !==
+      players[currentPlayer].name.toLowerCase()) return;
+
+  drawing = true;
+  canvas.setPointerCapture(e.pointerId);
+
+  const rect = canvas.getBoundingClientRect();
+
+  ctx.beginPath();
+  ctx.moveTo(
+    (e.clientX - rect.left) * canvas.width / rect.width,
+    (e.clientY - rect.top) * canvas.height / rect.height
+  );
+});
+
+canvas.addEventListener("pointermove", e => {
+  if (!drawing) return;
+
+  const rect = canvas.getBoundingClientRect();
+
+  ctx.lineWidth = 5;
+  ctx.lineCap = "round";
+  ctx.strokeStyle = "#111111";
+
+  ctx.lineTo(
+    (e.clientX - rect.left) * canvas.width / rect.width,
+    (e.clientY - rect.top) * canvas.height / rect.height
+  );
+
+  ctx.stroke();
+});
+
+canvas.addEventListener("pointerup", () => {
+  drawing = false;
+});
+
+canvas.addEventListener("pointercancel", () => {
+  drawing = false;
+});
+
+document.getElementById("guess").addEventListener("keydown", e => {
+  if (e.key === "Enter") sendGuess();
+});
+
+clearCanvas();
+</script>
+
+</body>
+</html>
+
