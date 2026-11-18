@@ -3,136 +3,67 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Draw Battle</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DRAW BATTLE</title>
 
 <style>
-* {
-  box-sizing: border-box;
+*{box-sizing:border-box}
+body{
+ margin:0;background:#10101b;color:white;
+ font-family:Arial,sans-serif;
 }
-
-body {
-  margin: 0;
-  background: #10111c;
-  color: white;
-  font-family: Arial, sans-serif;
+header{
+ padding:18px 5%;background:#19182a;
+ display:flex;justify-content:space-between;
+ align-items:center;border-bottom:1px solid #393451;
 }
-
-header {
-  background: #191b2b;
-  padding: 18px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border-bottom: 2px solid #30334b;
+.logo{font-size:25px;font-weight:900;color:#a78bfa}
+.owner{color:#facc15;font-weight:bold}
+main{max-width:1200px;margin:auto;padding:20px}
+.panel{
+ background:#1d1b30;padding:18px;
+ border:1px solid #393451;border-radius:14px;
+ margin-bottom:18px;
 }
-
-.logo {
-  font-size: 25px;
-  font-weight: bold;
-  color: #a78bfa;
+input,button{
+ padding:12px;border:0;border-radius:8px;
+ font-size:15px;
 }
-
-.owner {
-  background: #facc15;
-  color: black;
-  padding: 5px 10px;
-  border-radius: 8px;
-  font-size: 12px;
-  font-weight: bold;
+input{background:#302d49;color:white}
+button{
+ background:#8b5cf6;color:white;
+ font-weight:bold;cursor:pointer;
 }
-
-.container {
-  max-width: 1100px;
-  margin: auto;
-  padding: 20px;
+button:hover{background:#7046d3}
+button:disabled{opacity:.4;cursor:not-allowed}
+.row{display:flex;gap:10px;flex-wrap:wrap}
+.row input{flex:1;min-width:180px}
+#game{display:none}
+.layout{
+ display:grid;grid-template-columns:2fr 1fr;gap:18px;
 }
-
-.panel {
-  background: #1b1d2d;
-  padding: 20px;
-  border-radius: 15px;
-  margin-bottom: 20px;
+canvas{
+ display:block;width:100%;height:360px;
+ background:white;border-radius:10px;
+ touch-action:none;cursor:crosshair;
 }
-
-input, button {
-  padding: 12px;
-  border-radius: 8px;
-  border: none;
-  font-size: 15px;
+.timer{font-size:34px;color:#facc15;font-weight:bold}
+.players{display:flex;gap:10px;flex-wrap:wrap}
+.player{
+ background:#302d49;padding:10px;border-radius:8px;
 }
-
-input {
-  background: #30334b;
-  color: white;
+.chat{
+ height:290px;overflow:auto;
+ background:#11101d;padding:12px;border-radius:8px;
+ margin-bottom:12px;overflow-wrap:anywhere;
 }
-
-button {
-  background: #8b5cf6;
-  color: white;
-  cursor: pointer;
-  font-weight: bold;
-}
-
-button:hover {
-  background: #7042d5;
-}
-
-.game {
-  display: grid;
-  grid-template-columns: 2fr 1fr;
-  gap: 20px;
-}
-
-canvas {
-  background: white;
-  width: 100%;
-  height: 350px;
-  border-radius: 10px;
-  touch-action: none;
-  cursor: crosshair;
-}
-
-.chat {
-  height: 250px;
-  overflow-y: auto;
-  background: #10111c;
-  padding: 10px;
-  border-radius: 8px;
-  margin-bottom: 10px;
-}
-
-.chat p {
-  margin: 8px 0;
-  overflow-wrap: anywhere;
-}
-
-.timer {
-  font-size: 30px;
-  color: #facc15;
-  font-weight: bold;
-}
-
-.players {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.player {
-  background: #30334b;
-  padding: 10px;
-  border-radius: 8px;
-}
-
-#gameArea {
-  display: none;
-}
-
-@media(max-width:750px) {
-  .game {
-    grid-template-columns: 1fr;
-  }
+.chat p{margin:7px 0}
+.small{color:#aaa;font-size:13px}
+#word{color:#c4b5fd}
+#uidBox{word-break:break-all;font-size:12px;color:#aaa}
+@media(max-width:750px){
+ .layout{grid-template-columns:1fr}
+ canvas{height:300px}
 }
 </style>
 </head>
@@ -140,290 +71,756 @@ canvas {
 <body>
 
 <header>
-  <div class="logo">DRAW BATTLE</div>
-  <div id="ownerTag"></div>
+ <div class="logo">DRAW BATTLE</div>
+ <div id="headerUser">NOT LOGGED IN</div>
 </header>
 
-<div class="container">
+<main>
+
+<div class="panel" id="loginPanel">
+ <h1>Welcome to Draw Battle</h1>
+ <p>Join the public room and challenge other players!</p>
+
+ <div class="row">
+  <input id="username" maxlength="18"
+   placeholder="Choose a username">
+  <button id="joinButton" onclick="joinGame()">
+   PLAY NOW
+  </button>
+ </div>
+
+ <p id="status">Enter a username to join.</p>
+ <p class="small">Everyone plays in the same public room.</p>
+</div>
+
+<div id="game">
 
 <div class="panel">
-  <h2>Welcome to Draw Battle</h2>
-  <p>Draw the word before time runs out and beat everyone!</p>
-
-  <input id="username" placeholder="Enter your username">
-  <button onclick="joinGame()">Join Game</button>
-
-  <p id="status">Waiting to join...</p>
+ <h2>ONLINE PLAYERS</h2>
+ <div class="players" id="players"></div>
 </div>
 
-<div id="gameArea">
+<div class="layout">
 
 <div class="panel">
-  <h2>Players</h2>
-  <div class="players" id="players"></div>
-</div>
+ <h2>DRAWING ARENA</h2>
 
-<div class="game">
+ <div class="timer" id="timer">60</div>
+ <h3 id="word">Waiting for players...</h3>
 
-<div class="panel">
-  <h2>Drawing Arena</h2>
+ <canvas id="canvas" width="900" height="450"></canvas>
 
-  <div class="timer" id="timer">60</div>
-  <h3 id="word">Waiting for round...</h3>
+ <br>
 
-  <canvas id="canvas" width="800" height="400"></canvas>
+ <div class="row">
+  <button onclick="clearDrawing()" id="clearBtn">
+   CLEAR
+  </button>
+  <button onclick="finishRound(true)" id="nextBtn">
+   NEXT ROUND
+  </button>
+ </div>
 
-  <br><br>
-
-  <button onclick="clearCanvas()">Clear</button>
-  <button onclick="nextRound()">Next Round</button>
+ <p class="small" id="drawStatus">
+  Waiting for a player...
+ </p>
 </div>
 
 <div class="panel">
-  <h2>Live Chat</h2>
+ <h2>LIVE CHAT</h2>
+ <div class="chat" id="chat"></div>
 
-  <div class="chat" id="chat"></div>
+ <div class="row">
+  <input id="guess" maxlength="100"
+   placeholder="Guess the drawing...">
+  <button onclick="sendGuess()">SEND</button>
+ </div>
 
-  <input id="guess" placeholder="Guess the drawing..." style="width:100%">
-  <br><br>
-  <button onclick="sendGuess()" style="width:100%">Send Guess</button>
+ <br>
+ <h3>HOW TO PLAY</h3>
+ <p class="small">
+  The drawer gets 60 seconds to draw a secret word.
+  Everyone else guesses in chat.
+  Correct guesses earn 10 points.
+ </p>
 </div>
 
 </div>
+
+<div class="panel">
+ <h3>YOUR FIREBASE OWNER ID</h3>
+ <p id="uidBox">Loading...</p>
+ <button onclick="copyUID()">COPY OWNER ID</button>
+ <p class="small">
+  Save this ID. You will use it to activate your owner crown.
+ </p>
 </div>
+
 </div>
+</main>
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-database-compat.js"></script>
 
 <script>
-const OWNER_NAME = "YOUR_USERNAME";
+
+// ======================================
+// 1. FIREBASE CONFIGURATION
+// ======================================
+
+const firebaseConfig = {
+ apiKey: "PASTE_API_KEY",
+ authDomain: "PASTE_AUTH_DOMAIN",
+ databaseURL: "PASTE_DATABASE_URL",
+ projectId: "PASTE_PROJECT_ID",
+ appId: "PASTE_APP_ID"
+};
+
+firebase.initializeApp(firebaseConfig);
+
+const auth = firebase.auth();
+const db = firebase.database();
+
+// ======================================
+// 2. OWNER SETTINGS
+// ======================================
+
+// Replace this with your Firebase UID.
+// Get it after joining your website.
+
+const OWNER_UID = "PASTE_YOUR_UID_HERE";
+
+const room = db.ref("rooms/public");
+const playersRef = room.child("players");
+const gameRef = room.child("game");
+const messagesRef = room.child("messages");
+const strokesRef = room.child("strokes");
+
+let myUser = null;
+let myName = "";
+let currentGame = null;
+let currentWord = "";
+let currentRound = 0;
+let startBusy = false;
+let finishBusy = false;
+let drawing = false;
+let handledGuesses = new Set();
 
 const words = [
-  "Dragon", "Pizza", "Dog", "Car",
-  "Rocket", "Apple", "House", "Cat",
-  "Rainbow", "Football", "Shark",
-  "Airplane", "Computer", "Guitar",
-  "Pencil", "Elephant"
+ "Dragon","Pizza","Airplane","Elephant",
+ "Rainbow","Computer","Football","Shark",
+ "House","Rocket","Guitar","Apple",
+ "Dog","Cat","Robot","Volcano",
+ "Turtle","Castle","Banana","Penguin",
+ "Dinosaur","Backpack","Snowman","Helicopter"
 ];
-
-let players = [];
-let currentPlayer = 0;
-let currentWord = "";
-let time = 60;
-let timerInterval;
-let roundActive = false;
 
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
 
-let drawing = false;
+// ======================================
+// 3. LOGIN
+// ======================================
 
-function joinGame() {
-  const name = document.getElementById("username").value.trim();
+async function joinGame(){
 
-  if (!name) {
-    alert("Enter a username first!");
-    return;
+ const name = document.getElementById("username")
+  .value.trim();
+
+ if(!name){
+  alert("Enter a username!");
+  return;
+ }
+
+ if(name.length < 2){
+  alert("Username must be at least 2 characters.");
+  return;
+ }
+
+ document.getElementById("joinButton").disabled = true;
+
+ try{
+
+  if(!auth.currentUser){
+   await auth.signInAnonymously();
   }
 
-  if (players.some(p => p.name.toLowerCase() === name.toLowerCase())) {
-    alert("Username already taken!");
-    return;
-  }
+  myUser = auth.currentUser;
+  myName = name;
 
-  const player = {
-    name: name,
-    score: 0
-  };
+  const existing = await playersRef.once("value");
+  let taken = false;
 
-  players.push(player);
+  existing.forEach(child=>{
+   const data = child.val();
 
-  if (name.toLowerCase() === OWNER_NAME.toLowerCase()) {
-    document.getElementById("ownerTag").innerHTML =
-      '<span class="owner">👑 OWNER</span>';
-  }
-
-  document.getElementById("gameArea").style.display = "block";
-  document.getElementById("status").innerText = "Joined successfully!";
-
-  updatePlayers();
-  addMessage(name + " joined the game!");
-
-  if (players.length === 1) {
-    startRound();
-  }
-}
-
-function updatePlayers() {
-  const container = document.getElementById("players");
-  container.innerHTML = "";
-
-  players.forEach((player, index) => {
-    const div = document.createElement("div");
-    div.className = "player";
-
-    const isOwner = player.name.toLowerCase() ===
-      OWNER_NAME.toLowerCase();
-
-    div.textContent =
-      player.name + (isOwner ? " 👑 OWNER" : "") +
-      " | " + player.score + " pts";
-
-    container.appendChild(div);
+   if(child.key !== myUser.uid &&
+      data.name.toLowerCase() === name.toLowerCase()){
+    taken = true;
+   }
   });
+
+  if(taken){
+   alert("That username is already taken!");
+   document.getElementById("joinButton").disabled = false;
+   return;
+  }
+
+  const playerRef = playersRef.child(myUser.uid);
+
+  await playerRef.update({
+   name:name,
+   joinedAt:firebase.database.ServerValue.TIMESTAMP,
+   online:true
+  });
+
+  db.ref(".info/connected").on("value",snap=>{
+   if(snap.val() === true){
+    playerRef.child("online").onDisconnect().set(false);
+    playerRef.update({online:true});
+   }
+  });
+
+  await gameRef.transaction(game=>{
+   if(!game){
+    return {
+     status:"waiting",
+     drawerUid:null,
+     nextDrawerUid:myUser.uid,
+     endsAt:0,
+     round:0
+    };
+   }
+
+   if(game.status === "waiting" && !game.nextDrawerUid){
+    game.nextDrawerUid = myUser.uid;
+   }
+
+   return game;
+  });
+
+  document.getElementById("loginPanel").style.display="none";
+  document.getElementById("game").style.display="block";
+
+  document.getElementById("uidBox").textContent=myUser.uid;
+
+  updateHeader();
+
+  listenPlayers();
+  listenGame();
+  listenMessages();
+  listenStrokes();
+
+  setInterval(updateTimer,250);
+
+ }catch(error){
+  alert("Could not join: "+error.message);
+  document.getElementById("joinButton").disabled=false;
+ }
 }
 
-function addMessage(message) {
-  const chat = document.getElementById("chat");
-  const p = document.createElement("p");
-  p.textContent = message;
-  chat.appendChild(p);
-  chat.scrollTop = chat.scrollHeight;
+function updateHeader(){
+ const isOwner = myUser.uid === OWNER_UID;
+
+ document.getElementById("headerUser").innerHTML =
+  isOwner
+   ? '<span class="owner">👑 OWNER</span> '+escapeHTML(myName)
+   : escapeHTML(myName);
 }
 
-function startRound() {
-  clearInterval(timerInterval);
+// ======================================
+// 4. PLAYERS
+// ======================================
 
-  if (players.length === 0) return;
+function listenPlayers(){
 
-  roundActive = true;
-  time = 60;
+ playersRef.on("value",snap=>{
 
-  currentPlayer = currentPlayer % players.length;
+  const list = document.getElementById("players");
+  list.innerHTML="";
 
-  currentWord = words[Math.floor(Math.random() * words.length)];
+  const all=[];
 
-  document.getElementById("word").innerText =
-    players[currentPlayer].name + " is drawing!";
+  snap.forEach(child=>{
+   const player=child.val();
 
-  document.getElementById("timer").innerText = time;
+   if(player.online){
+    all.push({uid:child.key,...player});
+   }
+  });
 
-  clearCanvas();
+  all.sort((a,b)=>b.score-a.score);
 
-  addMessage(players[currentPlayer].name + " is now drawing!");
+  all.forEach(player=>{
 
-  timerInterval = setInterval(() => {
-    time--;
-    document.getElementById("timer").innerText = time;
+   const div=document.createElement("div");
+   div.className="player";
 
-    if (time <= 0) {
-      endRound();
+   const isOwner=player.uid===OWNER_UID;
+
+   div.textContent =
+    player.name+
+    (isOwner?" 👑 OWNER":"")+
+    " | "+(player.score||0)+" pts";
+
+   list.appendChild(div);
+  });
+
+  if(all.length===0){
+   list.textContent="Waiting for players...";
+  }
+
+ });
+}
+
+// ======================================
+// 5. GAME STATE
+// ======================================
+
+function listenGame(){
+
+ gameRef.on("value",async snap=>{
+
+  const game=snap.val();
+  if(!game)return;
+
+  const oldRound=currentRound;
+  currentGame=game;
+  currentRound=game.round||0;
+
+  if(oldRound!==currentRound){
+   clearLocalCanvas();
+  }
+
+  const drawer=game.drawerUid===myUser.uid;
+
+  document.getElementById("nextBtn").style.display =
+   drawer || myUser.uid===OWNER_UID ? "inline-block":"none";
+
+  document.getElementById("clearBtn").disabled=!drawer;
+
+  if(game.status==="drawing"){
+
+   if(drawer){
+
+    document.getElementById("word").textContent =
+     currentWord ? "DRAW: "+currentWord : "Loading your word...";
+
+    if(!currentWord){
+     const secret=await room.child("secrets")
+      .child(myUser.uid).once("value");
+
+     currentWord=secret.val()||"";
+     document.getElementById("word").textContent=
+      "DRAW: "+currentWord;
     }
-  }, 1000);
-}
 
-function endRound() {
-  clearInterval(timerInterval);
-  roundActive = false;
+   }else{
 
-  document.getElementById("word").innerText =
-    "The word was: " + currentWord;
+    document.getElementById("word").textContent =
+     "Guess what "+(game.drawerName||"the player")+" is drawing!";
 
-  addMessage("Round ended! The word was " + currentWord);
-}
+   }
 
-function nextRound() {
-  if (players.length === 0) return;
+   document.getElementById("drawStatus").textContent =
+    drawer ? "You are the drawer!" : "Watch and guess!";
 
-  if (roundActive) {
-    clearInterval(timerInterval);
-    roundActive = false;
+  }else{
+
+   document.getElementById("word").textContent =
+    "Waiting for the next drawer...";
+
+   document.getElementById("drawStatus").textContent =
+    "Next round starting soon.";
   }
 
-  currentPlayer++;
-  startRound();
-}
-
-function sendGuess() {
-  const input = document.getElementById("guess");
-  const guess = input.value.trim();
-
-  if (!guess || !roundActive) return;
-
-  const playerName = document.getElementById("username").value.trim();
-
-  if (playerName.toLowerCase() ===
-      players[currentPlayer].name.toLowerCase()) {
-    addMessage("The drawer cannot guess their own word!");
-    input.value = "";
-    return;
+  if(game.status==="waiting" &&
+     game.nextDrawerUid===myUser.uid){
+   beginRound();
   }
 
-  if (guess.toLowerCase() === currentWord.toLowerCase()) {
-    const player = players.find(p =>
-      p.name.toLowerCase() === playerName.toLowerCase()
-    );
+ });
+}
 
-    if (player) {
-      player.score += 10;
-      updatePlayers();
-    }
+// ======================================
+// 6. START A ROUND
+// ======================================
 
-    addMessage(playerName + " guessed correctly! +10 points");
-    endRound();
-  } else {
-    addMessage(playerName + ": " + guess);
+async function beginRound(){
+
+ if(startBusy || !myUser)return;
+
+ startBusy=true;
+
+ try{
+
+  const word=words[Math.floor(Math.random()*words.length)];
+
+  await room.child("secrets").child(myUser.uid).set(word);
+
+  const result=await gameRef.transaction(game=>{
+
+   if(!game || game.status!=="waiting")return;
+
+   if(game.nextDrawerUid &&
+      game.nextDrawerUid!==myUser.uid)return;
+
+   return {
+    status:"drawing",
+    drawerUid:myUser.uid,
+    drawerName:myName,
+    nextDrawerUid:null,
+    endsAt:Date.now()+60000,
+    round:(game.round||0)+1
+   };
+
+  });
+
+  if(result.committed){
+
+   currentWord=word;
+
+   await strokesRef.remove();
+
+   await messagesRef.push({
+    system:true,
+    text:myName+" is drawing a new word!",
+    time:Date.now()
+   });
+
   }
 
-  input.value = "";
+ }catch(error){
+  console.error(error);
+ }finally{
+  startBusy=false;
+ }
 }
 
-function clearCanvas() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.fillStyle = "white";
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
+// ======================================
+// 7. TIMER
+// ======================================
+
+function updateTimer(){
+
+ if(!currentGame || currentGame.status!=="drawing"){
+  document.getElementById("timer").textContent="60";
+  return;
+ }
+
+ const remaining=Math.max(
+  0,
+  Math.ceil((currentGame.endsAt-Date.now())/1000)
+ );
+
+ document.getElementById("timer").textContent=remaining;
+
+ if(remaining===0 && currentGame.drawerUid===myUser.uid){
+  finishRound(false);
+ }
 }
 
-canvas.addEventListener("pointerdown", e => {
-  if (!roundActive) return;
+// ======================================
+// 8. END ROUND / NEXT PLAYER
+// ======================================
 
-  const playerName = document.getElementById("username").value.trim();
+async function finishRound(manual=false){
 
-  if (playerName.toLowerCase() !==
-      players[currentPlayer].name.toLowerCase()) return;
+ if(finishBusy || !currentGame)return;
 
-  drawing = true;
-  canvas.setPointerCapture(e.pointerId);
+ const isDrawer=currentGame.drawerUid===myUser.uid;
+ const isOwner=myUser.uid===OWNER_UID;
 
-  const rect = canvas.getBoundingClientRect();
+ if(!isDrawer && !isOwner)return;
 
-  ctx.beginPath();
-  ctx.moveTo(
-    (e.clientX - rect.left) * canvas.width / rect.width,
-    (e.clientY - rect.top) * canvas.height / rect.height
-  );
+ if(!manual && Date.now()<currentGame.endsAt)return;
+
+ finishBusy=true;
+
+ try{
+
+  const snap=await playersRef.once("value");
+  const online=[];
+
+  snap.forEach(child=>{
+   const p=child.val();
+
+   if(p.online){
+    online.push({uid:child.key,...p});
+   }
+  });
+
+  online.sort((a,b)=>a.joinedAt-b.joinedAt);
+
+  let nextUid=null;
+
+  if(online.length){
+   const index=online.findIndex(
+    p=>p.uid===currentGame.drawerUid
+   );
+
+   nextUid=online[(index+1+online.length)%online.length].uid;
+  }
+
+  const result=await gameRef.transaction(game=>{
+
+   if(!game || game.status!=="drawing")return;
+
+   if(game.drawerUid!==myUser.uid && !isOwner)return;
+
+   return {
+    ...game,
+    status:"waiting",
+    drawerUid:null,
+    nextDrawerUid:nextUid,
+    endsAt:0,
+    lastWord:currentWord||""
+   };
+
+  });
+
+  if(result.committed){
+
+   const answer=currentWord;
+
+   currentWord="";
+
+   await messagesRef.push({
+    system:true,
+    text:"Round ended! The word was "+answer,
+    time:Date.now()
+   });
+
+  }
+
+ }catch(error){
+  console.error(error);
+ }finally{
+  finishBusy=false;
+ }
+}
+
+// ======================================
+// 9. DRAWING CANVAS
+// ======================================
+
+function clearLocalCanvas(){
+ ctx.clearRect(0,0,canvas.width,canvas.height);
+ ctx.fillStyle="white";
+ ctx.fillRect(0,0,canvas.width,canvas.height);
+}
+
+function clearDrawing(){
+
+ if(!currentGame ||
+    currentGame.drawerUid!==myUser.uid)return;
+
+ clearLocalCanvas();
+
+ strokesRef.remove();
+}
+
+function drawSegment(s){
+
+ ctx.beginPath();
+ ctx.moveTo(s.x1*canvas.width,s.y1*canvas.height);
+ ctx.lineTo(s.x2*canvas.width,s.y2*canvas.height);
+ ctx.strokeStyle=s.color||"#111111";
+ ctx.lineWidth=s.width||5;
+ ctx.lineCap="round";
+ ctx.lineJoin="round";
+ ctx.stroke();
+}
+
+function listenStrokes(){
+
+ strokesRef.on("child_added",snap=>{
+
+  const s=snap.val();
+
+  if(!s || !currentGame)return;
+  if(s.round!==currentGame.round)return;
+
+  drawSegment(s);
+ });
+}
+
+function getPosition(e){
+
+ const rect=canvas.getBoundingClientRect();
+
+ return {
+  x:(e.clientX-rect.left)/rect.width,
+  y:(e.clientY-rect.top)/rect.height
+ };
+}
+
+canvas.addEventListener("pointerdown",e=>{
+
+ if(!currentGame ||
+    currentGame.drawerUid!==myUser.uid)return;
+
+ drawing=true;
+ canvas.setPointerCapture(e.pointerId);
+
+ const p=getPosition(e);
+
+ window.lastPoint=p;
 });
 
-canvas.addEventListener("pointermove", e => {
-  if (!drawing) return;
+canvas.addEventListener("pointermove",e=>{
 
-  const rect = canvas.getBoundingClientRect();
+ if(!drawing || !currentGame ||
+    currentGame.drawerUid!==myUser.uid)return;
 
-  ctx.lineWidth = 5;
-  ctx.lineCap = "round";
-  ctx.strokeStyle = "#111111";
+ const p=getPosition(e);
+ const old=window.lastPoint;
 
-  ctx.lineTo(
-    (e.clientX - rect.left) * canvas.width / rect.width,
-    (e.clientY - rect.top) * canvas.height / rect.height
-  );
+ const stroke={
+  x1:old.x,
+  y1:old.y,
+  x2:p.x,
+  y2:p.y,
+  color:"#111111",
+  width:5,
+  round:currentGame.round
+ };
 
-  ctx.stroke();
+ drawSegment(stroke);
+ strokesRef.push(stroke);
+
+ window.lastPoint=p;
 });
 
-canvas.addEventListener("pointerup", () => {
-  drawing = false;
+canvas.addEventListener("pointerup",()=>{
+ drawing=false;
 });
 
-canvas.addEventListener("pointercancel", () => {
-  drawing = false;
+canvas.addEventListener("pointercancel",()=>{
+ drawing=false;
 });
 
-document.getElementById("guess").addEventListener("keydown", e => {
-  if (e.key === "Enter") sendGuess();
+// ======================================
+// 10. LIVE CHAT AND GUESSES
+// ======================================
+
+function listenMessages(){
+
+ messagesRef.limitToLast(100).on("child_added",snap=>{
+
+  const message=snap.val();
+
+  if(!message)return;
+
+  addChatMessage(message);
+
+  if(
+   currentGame &&
+   currentGame.status==="drawing" &&
+   currentGame.drawerUid===myUser.uid &&
+   message.uid &&
+   message.uid!==myUser.uid &&
+   currentWord &&
+   message.text.trim().toLowerCase()===currentWord.toLowerCase() &&
+   !handledGuesses.has(snap.key)
+  ){
+
+   handledGuesses.add(snap.key);
+
+   const scoreRef=playersRef.child(message.uid).child("score");
+
+   scoreRef.transaction(score=>(score||0)+10);
+
+   messagesRef.push({
+    system:true,
+    text:message.name+" guessed correctly! +10 points!",
+    time:Date.now()
+   });
+
+   finishRound(true);
+  }
+
+ });
+}
+
+function addChatMessage(message){
+
+ const chat=document.getElementById("chat");
+ const p=document.createElement("p");
+
+ if(message.system){
+  p.style.color="#c4b5fd";
+  p.textContent=message.text;
+ }else{
+  p.textContent=message.name+": "+message.text;
+ }
+
+ chat.appendChild(p);
+ chat.scrollTop=chat.scrollHeight;
+}
+
+async function sendGuess(){
+
+ if(!myUser || !currentGame ||
+    currentGame.status!=="drawing")return;
+
+ const input=document.getElementById("guess");
+ const text=input.value.trim();
+
+ if(!text)return;
+
+ if(currentGame.drawerUid===myUser.uid){
+  input.value="";
+  return;
+ }
+
+ input.value="";
+
+ await messagesRef.push({
+  uid:myUser.uid,
+  name:myName,
+  text:text,
+  time:Date.now()
+ });
+}
+
+document.getElementById("guess").addEventListener("keydown",e=>{
+ if(e.key==="Enter")sendGuess();
 });
 
-clearCanvas();
+// ======================================
+// 11. OWNER ID
+// ======================================
+
+function copyUID(){
+
+ if(!myUser)return;
+
+ navigator.clipboard.writeText(myUser.uid)
+  .then(()=>alert("Owner ID copied!"))
+  .catch(()=>alert("Your ID: "+myUser.uid));
+}
+
+// ======================================
+// 12. HELPERS
+// ======================================
+
+function escapeHTML(value){
+
+ return String(value).replace(/[&<>"']/g,char=>({
+  "&":"&amp;",
+  "<":"&lt;",
+  ">":"&gt;",
+  '"':"&quot;",
+  "'":"&#39;"
+ }[char]));
+}
+
+clearLocalCanvas();
+
 </script>
 
 </body>
 </html>
-
