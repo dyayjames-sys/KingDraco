@@ -1,826 +1,1088 @@
 
+draw-battle/
+│
+├── index.html
+├── style.css
+├── game.js
+│
+└── server/
+    ├── server.js
+    └── package.json
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>DRAW BATTLE</title>
-
-<style>
-*{box-sizing:border-box}
-body{
- margin:0;background:#10101b;color:white;
- font-family:Arial,sans-serif;
-}
-header{
- padding:18px 5%;background:#19182a;
- display:flex;justify-content:space-between;
- align-items:center;border-bottom:1px solid #393451;
-}
-.logo{font-size:25px;font-weight:900;color:#a78bfa}
-.owner{color:#facc15;font-weight:bold}
-main{max-width:1200px;margin:auto;padding:20px}
-.panel{
- background:#1d1b30;padding:18px;
- border:1px solid #393451;border-radius:14px;
- margin-bottom:18px;
-}
-input,button{
- padding:12px;border:0;border-radius:8px;
- font-size:15px;
-}
-input{background:#302d49;color:white}
-button{
- background:#8b5cf6;color:white;
- font-weight:bold;cursor:pointer;
-}
-button:hover{background:#7046d3}
-button:disabled{opacity:.4;cursor:not-allowed}
-.row{display:flex;gap:10px;flex-wrap:wrap}
-.row input{flex:1;min-width:180px}
-#game{display:none}
-.layout{
- display:grid;grid-template-columns:2fr 1fr;gap:18px;
-}
-canvas{
- display:block;width:100%;height:360px;
- background:white;border-radius:10px;
- touch-action:none;cursor:crosshair;
-}
-.timer{font-size:34px;color:#facc15;font-weight:bold}
-.players{display:flex;gap:10px;flex-wrap:wrap}
-.player{
- background:#302d49;padding:10px;border-radius:8px;
-}
-.chat{
- height:290px;overflow:auto;
- background:#11101d;padding:12px;border-radius:8px;
- margin-bottom:12px;overflow-wrap:anywhere;
-}
-.chat p{margin:7px 0}
-.small{color:#aaa;font-size:13px}
-#word{color:#c4b5fd}
-#uidBox{word-break:break-all;font-size:12px;color:#aaa}
-@media(max-width:750px){
- .layout{grid-template-columns:1fr}
- canvas{height:300px}
-}
-</style>
+<link rel="stylesheet" href="style.css">
 </head>
-
 <body>
 
 <header>
- <div class="logo">DRAW BATTLE</div>
- <div id="headerUser">NOT LOGGED IN</div>
+  <div class="logo">DRAW<span> BATTLE</span></div>
+  <div id="account">NOT CONNECTED</div>
 </header>
 
 <main>
 
-<div class="panel" id="loginPanel">
- <h1>Welcome to Draw Battle</h1>
- <p>Join the public room and challenge other players!</p>
+<section id="loginScreen" class="panel login">
+  <h1>DRAW BATTLE</h1>
+  <p>Draw it. Guess it. Win it.</p>
 
- <div class="row">
-  <input id="username" maxlength="18"
-   placeholder="Choose a username">
-  <button id="joinButton" onclick="joinGame()">
-   PLAY NOW
-  </button>
- </div>
+  <input id="username" maxlength="18" placeholder="Choose a username">
+  <input id="ownerKey" type="password" placeholder="Owner key (leave empty if player)">
+  <button id="joinBtn">JOIN GAME</button>
 
- <p id="status">Enter a username to join.</p>
- <p class="small">Everyone plays in the same public room.</p>
-</div>
+  <p id="connectionStatus">Connecting...</p>
+</section>
 
-<div id="game">
+<section id="gameScreen" hidden>
 
-<div class="panel">
- <h2>ONLINE PLAYERS</h2>
- <div class="players" id="players"></div>
-</div>
+  <section class="panel lobby">
+    <div>
+      <h2>PUBLIC LOBBY</h2>
+      <p id="onlineCount">0 players online</p>
+    </div>
+    <div id="roundStatus">Waiting for players...</div>
+  </section>
 
-<div class="layout">
+  <section class="panel">
+    <h2>PLAYERS</h2>
+    <div id="players" class="players"></div>
+  </section>
 
-<div class="panel">
- <h2>DRAWING ARENA</h2>
+  <section class="game-layout">
 
- <div class="timer" id="timer">60</div>
- <h3 id="word">Waiting for players...</h3>
+    <section class="panel drawing-panel">
 
- <canvas id="canvas" width="900" height="450"></canvas>
+      <div class="game-heading">
+        <div>
+          <h2>DRAWING ARENA</h2>
+          <p id="drawer">Waiting for drawer...</p>
+        </div>
+        <div id="timer">60</div>
+      </div>
 
- <br>
+      <h3 id="word">Waiting for round...</h3>
 
- <div class="row">
-  <button onclick="clearDrawing()" id="clearBtn">
-   CLEAR
-  </button>
-  <button onclick="finishRound(true)" id="nextBtn">
-   NEXT ROUND
-  </button>
- </div>
+      <canvas id="canvas" width="900" height="450"></canvas>
 
- <p class="small" id="drawStatus">
-  Waiting for a player...
- </p>
-</div>
+      <div class="toolbar">
+        <label>Color
+          <input type="color" id="color" value="#111111">
+        </label>
 
-<div class="panel">
- <h2>LIVE CHAT</h2>
- <div class="chat" id="chat"></div>
+        <label>Brush
+          <input type="range" id="brush" min="2" max="20" value="5">
+        </label>
 
- <div class="row">
-  <input id="guess" maxlength="100"
-   placeholder="Guess the drawing...">
-  <button onclick="sendGuess()">SEND</button>
- </div>
+        <button id="clearBtn">CLEAR</button>
+        <button id="skipBtn">END TURN</button>
+      </div>
 
- <br>
- <h3>HOW TO PLAY</h3>
- <p class="small">
-  The drawer gets 60 seconds to draw a secret word.
-  Everyone else guesses in chat.
-  Correct guesses earn 10 points.
- </p>
-</div>
+      <p id="drawingStatus">Waiting for players...</p>
+    </section>
 
-</div>
+    <section class="panel chat-panel">
+      <h2>LIVE CHAT</h2>
 
-<div class="panel">
- <h3>YOUR FIREBASE OWNER ID</h3>
- <p id="uidBox">Loading...</p>
- <button onclick="copyUID()">COPY OWNER ID</button>
- <p class="small">
-  Save this ID. You will use it to activate your owner crown.
- </p>
-</div>
+      <div id="chat"></div>
 
-</div>
+      <div class="chat-input">
+        <input id="guess" maxlength="100" placeholder="Guess the drawing...">
+        <button id="sendBtn">SEND</button>
+      </div>
+    </section>
+
+  </section>
+
+  <section class="panel">
+    <h2>LEADERBOARD</h2>
+    <div id="leaderboard"></div>
+  </section>
+
+</section>
+
 </main>
 
-<!-- Firebase SDK -->
-<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-database-compat.js"></script>
-
-<script>
-
-// ======================================
-// 1. FIREBASE CONFIGURATION
-// ======================================
-
-const firebaseConfig = {
- apiKey: "PASTE_API_KEY",
- authDomain: "PASTE_AUTH_DOMAIN",
- databaseURL: "PASTE_DATABASE_URL",
- projectId: "PASTE_PROJECT_ID",
- appId: "PASTE_APP_ID"
-};
-
-firebase.initializeApp(firebaseConfig);
-
-const auth = firebase.auth();
-const db = firebase.database();
-
-// ======================================
-// 2. OWNER SETTINGS
-// ======================================
-
-// Replace this with your Firebase UID.
-// Get it after joining your website.
-
-const OWNER_UID = "PASTE_YOUR_UID_HERE";
-
-const room = db.ref("rooms/public");
-const playersRef = room.child("players");
-const gameRef = room.child("game");
-const messagesRef = room.child("messages");
-const strokesRef = room.child("strokes");
-
-let myUser = null;
-let myName = "";
-let currentGame = null;
-let currentWord = "";
-let currentRound = 0;
-let startBusy = false;
-let finishBusy = false;
-let drawing = false;
-let handledGuesses = new Set();
-
-const words = [
- "Dragon","Pizza","Airplane","Elephant",
- "Rainbow","Computer","Football","Shark",
- "House","Rocket","Guitar","Apple",
- "Dog","Cat","Robot","Volcano",
- "Turtle","Castle","Banana","Penguin",
- "Dinosaur","Backpack","Snowman","Helicopter"
-];
-
-const canvas = document.getElementById("canvas");
-const ctx = canvas.getContext("2d");
-
-// ======================================
-// 3. LOGIN
-// ======================================
-
-async function joinGame(){
-
- const name = document.getElementById("username")
-  .value.trim();
-
- if(!name){
-  alert("Enter a username!");
-  return;
- }
-
- if(name.length < 2){
-  alert("Username must be at least 2 characters.");
-  return;
- }
-
- document.getElementById("joinButton").disabled = true;
-
- try{
-
-  if(!auth.currentUser){
-   await auth.signInAnonymously();
-  }
-
-  myUser = auth.currentUser;
-  myName = name;
-
-  const existing = await playersRef.once("value");
-  let taken = false;
-
-  existing.forEach(child=>{
-   const data = child.val();
-
-   if(child.key !== myUser.uid &&
-      data.name.toLowerCase() === name.toLowerCase()){
-    taken = true;
-   }
-  });
-
-  if(taken){
-   alert("That username is already taken!");
-   document.getElementById("joinButton").disabled = false;
-   return;
-  }
-
-  const playerRef = playersRef.child(myUser.uid);
-
-  await playerRef.update({
-   name:name,
-   joinedAt:firebase.database.ServerValue.TIMESTAMP,
-   online:true
-  });
-
-  db.ref(".info/connected").on("value",snap=>{
-   if(snap.val() === true){
-    playerRef.child("online").onDisconnect().set(false);
-    playerRef.update({online:true});
-   }
-  });
-
-  await gameRef.transaction(game=>{
-   if(!game){
-    return {
-     status:"waiting",
-     drawerUid:null,
-     nextDrawerUid:myUser.uid,
-     endsAt:0,
-     round:0
-    };
-   }
-
-   if(game.status === "waiting" && !game.nextDrawerUid){
-    game.nextDrawerUid = myUser.uid;
-   }
-
-   return game;
-  });
-
-  document.getElementById("loginPanel").style.display="none";
-  document.getElementById("game").style.display="block";
-
-  document.getElementById("uidBox").textContent=myUser.uid;
-
-  updateHeader();
-
-  listenPlayers();
-  listenGame();
-  listenMessages();
-  listenStrokes();
-
-  setInterval(updateTimer,250);
-
- }catch(error){
-  alert("Could not join: "+error.message);
-  document.getElementById("joinButton").disabled=false;
- }
-}
-
-function updateHeader(){
- const isOwner = myUser.uid === OWNER_UID;
-
- document.getElementById("headerUser").innerHTML =
-  isOwner
-   ? '<span class="owner">👑 OWNER</span> '+escapeHTML(myName)
-   : escapeHTML(myName);
-}
-
-// ======================================
-// 4. PLAYERS
-// ======================================
-
-function listenPlayers(){
-
- playersRef.on("value",snap=>{
-
-  const list = document.getElementById("players");
-  list.innerHTML="";
-
-  const all=[];
-
-  snap.forEach(child=>{
-   const player=child.val();
-
-   if(player.online){
-    all.push({uid:child.key,...player});
-   }
-  });
-
-  all.sort((a,b)=>b.score-a.score);
-
-  all.forEach(player=>{
-
-   const div=document.createElement("div");
-   div.className="player";
-
-   const isOwner=player.uid===OWNER_UID;
-
-   div.textContent =
-    player.name+
-    (isOwner?" 👑 OWNER":"")+
-    " | "+(player.score||0)+" pts";
-
-   list.appendChild(div);
-  });
-
-  if(all.length===0){
-   list.textContent="Waiting for players...";
-  }
-
- });
-}
-
-// ======================================
-// 5. GAME STATE
-// ======================================
-
-function listenGame(){
-
- gameRef.on("value",async snap=>{
-
-  const game=snap.val();
-  if(!game)return;
-
-  const oldRound=currentRound;
-  currentGame=game;
-  currentRound=game.round||0;
-
-  if(oldRound!==currentRound){
-   clearLocalCanvas();
-  }
-
-  const drawer=game.drawerUid===myUser.uid;
-
-  document.getElementById("nextBtn").style.display =
-   drawer || myUser.uid===OWNER_UID ? "inline-block":"none";
-
-  document.getElementById("clearBtn").disabled=!drawer;
-
-  if(game.status==="drawing"){
-
-   if(drawer){
-
-    document.getElementById("word").textContent =
-     currentWord ? "DRAW: "+currentWord : "Loading your word...";
-
-    if(!currentWord){
-     const secret=await room.child("secrets")
-      .child(myUser.uid).once("value");
-
-     currentWord=secret.val()||"";
-     document.getElementById("word").textContent=
-      "DRAW: "+currentWord;
-    }
-
-   }else{
-
-    document.getElementById("word").textContent =
-     "Guess what "+(game.drawerName||"the player")+" is drawing!";
-
-   }
-
-   document.getElementById("drawStatus").textContent =
-    drawer ? "You are the drawer!" : "Watch and guess!";
-
-  }else{
-
-   document.getElementById("word").textContent =
-    "Waiting for the next drawer...";
-
-   document.getElementById("drawStatus").textContent =
-    "Next round starting soon.";
-  }
-
-  if(game.status==="waiting" &&
-     game.nextDrawerUid===myUser.uid){
-   beginRound();
-  }
-
- });
-}
-
-// ======================================
-// 6. START A ROUND
-// ======================================
-
-async function beginRound(){
-
- if(startBusy || !myUser)return;
-
- startBusy=true;
-
- try{
-
-  const word=words[Math.floor(Math.random()*words.length)];
-
-  await room.child("secrets").child(myUser.uid).set(word);
-
-  const result=await gameRef.transaction(game=>{
-
-   if(!game || game.status!=="waiting")return;
-
-   if(game.nextDrawerUid &&
-      game.nextDrawerUid!==myUser.uid)return;
-
-   return {
-    status:"drawing",
-    drawerUid:myUser.uid,
-    drawerName:myName,
-    nextDrawerUid:null,
-    endsAt:Date.now()+60000,
-    round:(game.round||0)+1
-   };
-
-  });
-
-  if(result.committed){
-
-   currentWord=word;
-
-   await strokesRef.remove();
-
-   await messagesRef.push({
-    system:true,
-    text:myName+" is drawing a new word!",
-    time:Date.now()
-   });
-
-  }
-
- }catch(error){
-  console.error(error);
- }finally{
-  startBusy=false;
- }
-}
-
-// ======================================
-// 7. TIMER
-// ======================================
-
-function updateTimer(){
-
- if(!currentGame || currentGame.status!=="drawing"){
-  document.getElementById("timer").textContent="60";
-  return;
- }
-
- const remaining=Math.max(
-  0,
-  Math.ceil((currentGame.endsAt-Date.now())/1000)
- );
-
- document.getElementById("timer").textContent=remaining;
-
- if(remaining===0 && currentGame.drawerUid===myUser.uid){
-  finishRound(false);
- }
-}
-
-// ======================================
-// 8. END ROUND / NEXT PLAYER
-// ======================================
-
-async function finishRound(manual=false){
-
- if(finishBusy || !currentGame)return;
-
- const isDrawer=currentGame.drawerUid===myUser.uid;
- const isOwner=myUser.uid===OWNER_UID;
-
- if(!isDrawer && !isOwner)return;
-
- if(!manual && Date.now()<currentGame.endsAt)return;
-
- finishBusy=true;
-
- try{
-
-  const snap=await playersRef.once("value");
-  const online=[];
-
-  snap.forEach(child=>{
-   const p=child.val();
-
-   if(p.online){
-    online.push({uid:child.key,...p});
-   }
-  });
-
-  online.sort((a,b)=>a.joinedAt-b.joinedAt);
-
-  let nextUid=null;
-
-  if(online.length){
-   const index=online.findIndex(
-    p=>p.uid===currentGame.drawerUid
-   );
-
-   nextUid=online[(index+1+online.length)%online.length].uid;
-  }
-
-  const result=await gameRef.transaction(game=>{
-
-   if(!game || game.status!=="drawing")return;
-
-   if(game.drawerUid!==myUser.uid && !isOwner)return;
-
-   return {
-    ...game,
-    status:"waiting",
-    drawerUid:null,
-    nextDrawerUid:nextUid,
-    endsAt:0,
-    lastWord:currentWord||""
-   };
-
-  });
-
-  if(result.committed){
-
-   const answer=currentWord;
-
-   currentWord="";
-
-   await messagesRef.push({
-    system:true,
-    text:"Round ended! The word was "+answer,
-    time:Date.now()
-   });
-
-  }
-
- }catch(error){
-  console.error(error);
- }finally{
-  finishBusy=false;
- }
-}
-
-// ======================================
-// 9. DRAWING CANVAS
-// ======================================
-
-function clearLocalCanvas(){
- ctx.clearRect(0,0,canvas.width,canvas.height);
- ctx.fillStyle="white";
- ctx.fillRect(0,0,canvas.width,canvas.height);
-}
-
-function clearDrawing(){
-
- if(!currentGame ||
-    currentGame.drawerUid!==myUser.uid)return;
-
- clearLocalCanvas();
-
- strokesRef.remove();
-}
-
-function drawSegment(s){
-
- ctx.beginPath();
- ctx.moveTo(s.x1*canvas.width,s.y1*canvas.height);
- ctx.lineTo(s.x2*canvas.width,s.y2*canvas.height);
- ctx.strokeStyle=s.color||"#111111";
- ctx.lineWidth=s.width||5;
- ctx.lineCap="round";
- ctx.lineJoin="round";
- ctx.stroke();
-}
-
-function listenStrokes(){
-
- strokesRef.on("child_added",snap=>{
-
-  const s=snap.val();
-
-  if(!s || !currentGame)return;
-  if(s.round!==currentGame.round)return;
-
-  drawSegment(s);
- });
-}
-
-function getPosition(e){
-
- const rect=canvas.getBoundingClientRect();
-
- return {
-  x:(e.clientX-rect.left)/rect.width,
-  y:(e.clientY-rect.top)/rect.height
- };
-}
-
-canvas.addEventListener("pointerdown",e=>{
-
- if(!currentGame ||
-    currentGame.drawerUid!==myUser.uid)return;
-
- drawing=true;
- canvas.setPointerCapture(e.pointerId);
-
- const p=getPosition(e);
-
- window.lastPoint=p;
-});
-
-canvas.addEventListener("pointermove",e=>{
-
- if(!drawing || !currentGame ||
-    currentGame.drawerUid!==myUser.uid)return;
-
- const p=getPosition(e);
- const old=window.lastPoint;
-
- const stroke={
-  x1:old.x,
-  y1:old.y,
-  x2:p.x,
-  y2:p.y,
-  color:"#111111",
-  width:5,
-  round:currentGame.round
- };
-
- drawSegment(stroke);
- strokesRef.push(stroke);
-
- window.lastPoint=p;
-});
-
-canvas.addEventListener("pointerup",()=>{
- drawing=false;
-});
-
-canvas.addEventListener("pointercancel",()=>{
- drawing=false;
-});
-
-// ======================================
-// 10. LIVE CHAT AND GUESSES
-// ======================================
-
-function listenMessages(){
-
- messagesRef.limitToLast(100).on("child_added",snap=>{
-
-  const message=snap.val();
-
-  if(!message)return;
-
-  addChatMessage(message);
-
-  if(
-   currentGame &&
-   currentGame.status==="drawing" &&
-   currentGame.drawerUid===myUser.uid &&
-   message.uid &&
-   message.uid!==myUser.uid &&
-   currentWord &&
-   message.text.trim().toLowerCase()===currentWord.toLowerCase() &&
-   !handledGuesses.has(snap.key)
-  ){
-
-   handledGuesses.add(snap.key);
-
-   const scoreRef=playersRef.child(message.uid).child("score");
-
-   scoreRef.transaction(score=>(score||0)+10);
-
-   messagesRef.push({
-    system:true,
-    text:message.name+" guessed correctly! +10 points!",
-    time:Date.now()
-   });
-
-   finishRound(true);
-  }
-
- });
-}
-
-function addChatMessage(message){
-
- const chat=document.getElementById("chat");
- const p=document.createElement("p");
-
- if(message.system){
-  p.style.color="#c4b5fd";
-  p.textContent=message.text;
- }else{
-  p.textContent=message.name+": "+message.text;
- }
-
- chat.appendChild(p);
- chat.scrollTop=chat.scrollHeight;
-}
-
-async function sendGuess(){
-
- if(!myUser || !currentGame ||
-    currentGame.status!=="drawing")return;
-
- const input=document.getElementById("guess");
- const text=input.value.trim();
-
- if(!text)return;
-
- if(currentGame.drawerUid===myUser.uid){
-  input.value="";
-  return;
- }
-
- input.value="";
-
- await messagesRef.push({
-  uid:myUser.uid,
-  name:myName,
-  text:text,
-  time:Date.now()
- });
-}
-
-document.getElementById("guess").addEventListener("keydown",e=>{
- if(e.key==="Enter")sendGuess();
-});
-
-// ======================================
-// 11. OWNER ID
-// ======================================
-
-function copyUID(){
-
- if(!myUser)return;
-
- navigator.clipboard.writeText(myUser.uid)
-  .then(()=>alert("Owner ID copied!"))
-  .catch(()=>alert("Your ID: "+myUser.uid));
-}
-
-// ======================================
-// 12. HELPERS
-// ======================================
-
-function escapeHTML(value){
-
- return String(value).replace(/[&<>"']/g,char=>({
-  "&":"&amp;",
-  "<":"&lt;",
-  ">":"&gt;",
-  '"':"&quot;",
-  "'":"&#39;"
- }[char]));
-}
-
-clearLocalCanvas();
-
-</script>
-
+<script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
+<script src="game.js"></script>
 </body>
 </html>
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: #10101b;
+  color: white;
+  font-family: Arial, sans-serif;
+}
+
+header {
+  padding: 20px 5%;
+  background: #19182a;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #393451;
+}
+
+.logo {
+  font-size: 25px;
+  font-weight: 900;
+  color: #a78bfa;
+}
+
+.logo span {
+  color: white;
+}
+
+#account {
+  font-size: 13px;
+  font-weight: bold;
+}
+
+.owner {
+  color: #facc15;
+  font-weight: bold;
+}
+
+main {
+  max-width: 1250px;
+  padding: 20px;
+  margin: auto;
+}
+
+.panel {
+  background: #1d1b30;
+  border: 1px solid #393451;
+  border-radius: 14px;
+  padding: 20px;
+  margin-bottom: 18px;
+}
+
+.login {
+  max-width: 480px;
+  margin: 70px auto;
+  text-align: center;
+}
+
+.login h1 {
+  font-size: 38px;
+  color: #a78bfa;
+}
+
+input, button {
+  padding: 12px;
+  border: none;
+  border-radius: 8px;
+  font-size: 15px;
+}
+
+input {
+  background: #302d49;
+  color: white;
+  outline: none;
+}
+
+.login input {
+  width: 100%;
+  margin: 8px 0;
+}
+
+button {
+  background: #8b5cf6;
+  color: white;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+button:hover {
+  background: #7046d3;
+}
+
+button:disabled {
+  opacity: .4;
+  cursor: not-allowed;
+}
+
+#joinBtn {
+  width: 100%;
+  margin-top: 12px;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+.lobby {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.players {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.player {
+  background: #302d49;
+  padding: 12px;
+  border-radius: 9px;
+}
+
+.game-layout {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 18px;
+}
+
+.game-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+#timer {
+  font-size: 38px;
+  color: #facc15;
+  font-weight: bold;
+}
+
+#word {
+  color: #c4b5fd;
+  min-height: 25px;
+}
+
+canvas {
+  width: 100%;
+  height: 360px;
+  display: block;
+  background: white;
+  border-radius: 10px;
+  touch-action: none;
+  cursor: crosshair;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  margin-top: 15px;
+}
+
+.toolbar label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.toolbar input[type="color"] {
+  width: 45px;
+  height: 40px;
+  padding: 3px;
+}
+
+.toolbar input[type="range"] {
+  width: 90px;
+}
+
+#chat {
+  height: 330px;
+  background: #11101d;
+  padding: 12px;
+  overflow-y: auto;
+  border-radius: 9px;
+  overflow-wrap: anywhere;
+}
+
+#chat p {
+  margin: 8px 0;
+}
+
+.chat-input {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.chat-input input {
+  flex: 1;
+  min-width: 0;
+}
+
+.system-message {
+  color: #c4b5fd;
+}
+
+#leaderboard {
+  display: grid;
+  gap: 8px;
+}
+
+.rank {
+  padding: 12px;
+  background: #302d49;
+  border-radius: 8px;
+}
+
+#drawingStatus {
+  color: #aaa;
+  font-size: 13px;
+}
+
+@media(max-width: 800px) {
+  .game-layout {
+    grid-template-columns: 1fr;
+  }
+
+  canvas {
+    height: 300px;
+  }
+
+  .login {
+    margin: 25px auto;
+  }
+}
+
+const SERVER_URL = "https://YOUR-SERVER.onrender.com";
+
+const socket = io(SERVER_URL, {
+  autoConnect: false,
+  transports: ["websocket", "polling"]
+});
+
+const $ = id => document.getElementById(id);
+
+let myName = "";
+let myId = "";
+let isOwner = false;
+let isDrawer = false;
+let currentRound = 0;
+let gameState = null;
+let timerInterval = null;
+let drawing = false;
+let lastPoint = null;
+
+const canvas = $("canvas");
+const ctx = canvas.getContext("2d");
+
+function setStatus(message) {
+  $("connectionStatus").textContent = message;
+}
+
+function escapeText(value) {
+  return String(value).replace(/[&<>"']/g, char => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;"
+  })[char]);
+}
+
+$("joinBtn").onclick = () => {
+  myName = $("username").value.trim();
+
+  if (myName.length < 2) {
+    setStatus("Username must be at least 2 characters.");
+    return;
+  }
+
+  $("joinBtn").disabled = true;
+  setStatus("Connecting to multiplayer server...");
+
+  socket.connect();
+};
+
+socket.on("connect", () => {
+  myId = socket.id;
+
+  socket.emit("join", {
+    username: myName,
+    ownerKey: $("ownerKey").value
+  });
+});
+
+socket.on("join-success", data => {
+  isOwner = data.isOwner;
+
+  $("loginScreen").hidden = true;
+  $("gameScreen").hidden = false;
+
+  $("account").innerHTML = isOwner
+    ? '<span class="owner">👑 OWNER</span> ' + escapeText(myName)
+    : escapeText(myName);
+
+  setStatus("Connected!");
+});
+
+socket.on("join-error", message => {
+  setStatus(message);
+  $("joinBtn").disabled = false;
+  socket.disconnect();
+});
+
+socket.on("disconnect", () => {
+  $("account").textContent = "DISCONNECTED";
+  $("joinBtn").disabled = false;
+  $("drawingStatus").textContent = "Connection lost. Reconnect to play.";
+});
+
+socket.on("players", players => {
+  $("onlineCount").textContent =
+    players.length + " players online";
+
+  $("players").innerHTML = "";
+
+  players.forEach(player => {
+    const div = document.createElement("div");
+    div.className = "player";
+
+    div.textContent =
+      player.username +
+      (player.isOwner ? " 👑 OWNER" : "") +
+      " · " + player.score + " pts";
+
+    $("players").appendChild(div);
+  });
+
+  const sorted = [...players].sort(
+    (a, b) => b.score - a.score
+  );
+
+  $("leaderboard").innerHTML = "";
+
+  sorted.forEach((player, index) => {
+    const div = document.createElement("div");
+    div.className = "rank";
+
+    div.textContent =
+      "#" + (index + 1) + " " +
+      player.username + " — " +
+      player.score + " points";
+
+    $("leaderboard").appendChild(div);
+  });
+});
+
+socket.on("game-state", state => {
+  gameState = state;
+  currentRound = state.round;
+  isDrawer = state.drawerId === socket.id;
+
+  $("roundStatus").textContent =
+    state.status === "drawing"
+      ? "ROUND " + state.round
+      : "Waiting for next round...";
+
+  $("drawer").textContent =
+    state.drawerName
+      ? state.drawerName + " is drawing"
+      : "Waiting for drawer...";
+
+  $("word").textContent = isDrawer
+    ? "YOUR WORD: " + (state.secretWord || "Loading...")
+    : state.status === "drawing"
+      ? "Guess what they're drawing!"
+      : "Waiting for the next round...";
+
+  $("drawingStatus").textContent =
+    isDrawer
+      ? "You are drawing! Everyone else is guessing."
+      : "Watch the drawing and guess the word!";
+
+  $("skipBtn").disabled = !isDrawer && !isOwner;
+  $("clearBtn").disabled = !isDrawer;
+
+  if (state.status !== "drawing") {
+    $("timer").textContent = "60";
+  }
+
+  if (state.status === "drawing") {
+    $("timer").textContent = Math.max(
+      0,
+      Math.ceil((state.endsAt - Date.now()) / 1000)
+    );
+  }
+
+  if (state.round !== window.lastDisplayedRound) {
+    window.lastDisplayedRound = state.round;
+    clearCanvasLocal();
+  }
+});
+
+socket.on("timer", remaining => {
+  $("timer").textContent = remaining;
+});
+
+socket.on("drawing-segment", segment => {
+  if (segment.round !== currentRound) return;
+  drawSegment(segment);
+});
+
+socket.on("drawing-cleared", () => {
+  clearCanvasLocal();
+});
+
+socket.on("chat-message", message => {
+  const p = document.createElement("p");
+
+  if (message.system) {
+    p.className = "system-message";
+    p.textContent = message.text;
+  } else {
+    p.textContent = message.username + ": " + message.text;
+  }
+
+  $("chat").appendChild(p);
+  $("chat").scrollTop = $("chat").scrollHeight;
+});
+
+socket.on("round-ended", data => {
+  $("word").textContent = "The word was: " + data.word;
+  $("drawingStatus").textContent = "Round finished!";
+});
+
+function clearCanvasLocal() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = "white";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+}
+
+function drawSegment(s) {
+  ctx.beginPath();
+  ctx.moveTo(s.x1 * canvas.width, s.y1 * canvas.height);
+  ctx.lineTo(s.x2 * canvas.width, s.y2 * canvas.height);
+  ctx.strokeStyle = s.color;
+  ctx.lineWidth = s.width;
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  ctx.stroke();
+}
+
+function getPoint(e) {
+  const rect = canvas.getBoundingClientRect();
+
+  return {
+    x: (e.clientX - rect.left) / rect.width,
+    y: (e.clientY - rect.top) / rect.height
+  };
+}
+
+canvas.addEventListener("pointerdown", e => {
+  if (!isDrawer || !gameState ||
+      gameState.status !== "drawing") return;
+
+  drawing = true;
+  canvas.setPointerCapture(e.pointerId);
+  lastPoint = getPoint(e);
+});
+
+canvas.addEventListener("pointermove", e => {
+  if (!drawing || !isDrawer || !lastPoint) return;
+
+  const point = getPoint(e);
+
+  const segment = {
+    x1: lastPoint.x,
+    y1: lastPoint.y,
+    x2: point.x,
+    y2: point.y,
+    color: $("color").value,
+    width: Number($("brush").value)
+  };
+
+  drawSegment(segment);
+
+  socket.emit("draw", segment);
+
+  lastPoint = point;
+});
+
+function stopDrawing() {
+  drawing = false;
+  lastPoint = null;
+}
+
+canvas.addEventListener("pointerup", stopDrawing);
+canvas.addEventListener("pointercancel", stopDrawing);
+
+$("clearBtn").onclick = () => {
+  if (!isDrawer) return;
+
+  clearCanvasLocal();
+  socket.emit("clear-drawing");
+};
+
+$("skipBtn").onclick = () => {
+  if (isDrawer || isOwner) {
+    socket.emit("end-round");
+  }
+};
+
+function sendGuess() {
+  const input = $("guess");
+  const text = input.value.trim();
+
+  if (!text) return;
+
+  socket.emit("guess", { text });
+  input.value = "";
+}
+
+$("sendBtn").onclick = sendGuess;
+
+$("guess").addEventListener("keydown", e => {
+  if (e.key === "Enter") sendGuess();
+});
+
+setInterval(() => {
+  if (!gameState || gameState.status !== "drawing") return;
+
+  $("timer").textContent = Math.max(
+    0,
+    Math.ceil((gameState.endsAt - Date.now()) / 1000)
+  );
+}, 250);
+
+clearCanvasLocal();
+
+{
+  "name": "draw-battle-server",
+  "version": "1.0.0",
+  "description": "Draw Battle multiplayer server",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "socket.io": "^4.8.1"
+  }
+}
+
+const express = require("express");
+const http = require("http");
+const { Server } = require("socket.io");
+
+const app = express();
+const server = http.createServer(app);
+
+const PORT = process.env.PORT || 3000;
+const OWNER_KEY = process.env.OWNER_KEY;
+
+if (!OWNER_KEY) {
+  throw new Error("Set the OWNER_KEY environment variable!");
+}
+
+const allowedOrigins = (
+  process.env.CLIENT_ORIGIN || "*"
+).split(",").map(x => x.trim());
+
+const io = new Server(server, {
+  cors: {
+    origin: allowedOrigins.includes("*") ? "*" : allowedOrigins,
+    methods: ["GET", "POST"]
+  },
+  maxHttpBufferSize: 1e6
+});
+
+app.get("/", (req, res) => {
+  res.send("Draw Battle multiplayer server is running!");
+});
+
+const players = new Map();
+
+const words = [
+  "Dragon", "Pizza", "Airplane", "Elephant",
+  "Rainbow", "Computer", "Football", "Shark",
+  "House", "Rocket", "Guitar", "Apple",
+  "Dog", "Cat", "Robot", "Volcano",
+  "Turtle", "Castle", "Banana", "Penguin",
+  "Dinosaur", "Backpack", "Snowman",
+  "Helicopter", "Hamburger", "Octopus",
+  "Spaceship", "Mountain", "Cactus"
+];
+
+let game = {
+  status: "waiting",
+  drawerId: null,
+  drawerName: null,
+  secretWord: null,
+  endsAt: 0,
+  round: 0,
+  nextDrawerIndex: 0
+};
+
+let timer = null;
+let nextRoundTimeout = null;
+let drawingHistory = [];
+let roundGuessed = new Set();
+
+function publicPlayers() {
+  return [...players.values()].map(player => ({
+    id: player.id,
+    username: player.username,
+    score: player.score,
+    isOwner: player.isOwner
+  }));
+}
+
+function broadcastPlayers() {
+  io.emit("players", publicPlayers());
+}
+
+function systemMessage(text) {
+  io.emit("chat-message", {
+    system: true,
+    text: String(text).slice(0, 200)
+  });
+}
+
+function sendGameState() {
+  for (const socket of io.sockets.sockets.values()) {
+    const player = players.get(socket.id);
+    if (!player) continue;
+
+    socket.emit("game-state", {
+      status: game.status,
+      drawerId: game.drawerId,
+      drawerName: game.drawerName,
+      secretWord:
+        player.id === game.drawerId
+          ? game.secretWord
+          : null,
+      endsAt: game.endsAt,
+      round: game.round
+    });
+  }
+}
+
+function startRound() {
+  if (game.status === "drawing") return;
+
+  const online = [...players.values()];
+
+  if (online.length < 2) {
+    game.status = "waiting";
+    game.drawerId = null;
+    game.drawerName = null;
+    game.secretWord = null;
+    game.endsAt = 0;
+    sendGameState();
+    return;
+  }
+
+  if (game.nextDrawerIndex >= online.length) {
+    game.nextDrawerIndex = 0;
+  }
+
+  const drawer = online[game.nextDrawerIndex];
+
+  game.status = "drawing";
+  game.drawerId = drawer.id;
+  game.drawerName = drawer.username;
+  game.secretWord =
+    words[Math.floor(Math.random() * words.length)];
+
+  game.round++;
+  game.endsAt = Date.now() + 60000;
+
+  drawingHistory = [];
+  roundGuessed = new Set();
+
+  io.emit("drawing-cleared");
+
+  sendGameState();
+
+  systemMessage(drawer.username + " is drawing! You have 60 seconds.");
+
+  timer = setInterval(() => {
+    if (game.status !== "drawing") return;
+
+    const remaining = Math.max(
+      0,
+      Math.ceil((game.endsAt - Date.now()) / 1000)
+    );
+
+    io.emit("timer", remaining);
+
+    if (remaining <= 0) {
+      finishRound("Time is up!");
+    }
+  }, 250);
+}
+
+function finishRound(reason) {
+  if (game.status !== "drawing") return;
+
+  clearInterval(timer);
+  timer = null;
+
+  const answer = game.secretWord;
+
+  game.status = "waiting";
+  game.drawerId = null;
+  game.drawerName = null;
+  game.secretWord = null;
+  game.endsAt = 0;
+
+  io.emit("round-ended", {
+    word: answer,
+    reason
+  });
+
+  systemMessage(reason + " The word was " + answer + ".");
+
+  const online = [...players.values()];
+  const previousIndex = online.findIndex(
+    p => p.id === game.drawerId
+  );
+
+  // Use the saved drawer position before rotating.
+  game.nextDrawerIndex =
+    Math.max(0, previousIndex + 1);
+
+  sendGameState();
+
+  clearTimeout(nextRoundTimeout);
+
+  nextRoundTimeout = setTimeout(() => {
+    const currentPlayers = [...players.values()];
+
+    if (currentPlayers.length < 2) {
+      sendGameState();
+      return;
+    }
+
+    if (game.nextDrawerIndex >= currentPlayers.length) {
+      game.nextDrawerIndex = 0;
+    }
+
+    startRound();
+  }, 3500);
+}
+
+io.on("connection", socket => {
+  console.log("Connected:", socket.id);
+
+  let joined = false;
+  let lastDrawTime = 0;
+  let lastMessageTime = 0;
+
+  socket.on("join", data => {
+    if (joined) return;
+
+    const username = String(data?.username || "")
+      .trim()
+      .replace(/[<>]/g, "");
+
+    if (username.length < 2 || username.length > 18) {
+      socket.emit("join-error", "Username must be 2 to 18 characters.");
+      return;
+    }
+
+    const duplicate = [...players.values()].some(
+      p => p.username.toLowerCase() === username.toLowerCase()
+    );
+
+    if (duplicate) {
+      socket.emit("join-error", "That username is already taken.");
+      return;
+    }
+
+    const ownerKey = String(data?.ownerKey || "");
+    const isOwner = ownerKey === OWNER_KEY;
+
+    joined = true;
+
+    players.set(socket.id, {
+      id: socket.id,
+      username,
+      score: 0,
+      isOwner
+    });
+
+    socket.emit("join-success", { isOwner });
+
+    broadcastPlayers();
+
+    systemMessage(username + " joined the public lobby!");
+
+    if (players.size >= 2 && game.status === "waiting") {
+      clearTimeout(nextRoundTimeout);
+      nextRoundTimeout = setTimeout(startRound, 1500);
+    } else {
+      sendGameState();
+    }
+  });
+
+  socket.on("draw", segment => {
+    const player = players.get(socket.id);
+
+    if (!player ||
+        game.status !== "drawing" ||
+        game.drawerId !== socket.id) return;
+
+    if (Date.now() - lastDrawTime < 15) return;
+
+    lastDrawTime = Date.now();
+
+    const values = [
+      segment?.x1,
+      segment?.y1,
+      segment?.x2,
+      segment?.y2,
+      segment?.width
+    ];
+
+    if (!values.every(Number.isFinite)) return;
+
+    if (values.slice(0, 4).some(
+      n => n < 0 || n > 1
+    )) return;
+
+    const width = Math.min(20, Math.max(2, segment.width));
+
+    const color = /^#[0-9a-fA-F]{6}$/.test(segment.color)
+      ? segment.color
+      : "#111111";
+
+    const clean = {
+      x1: segment.x1,
+      y1: segment.y1,
+      x2: segment.x2,
+      y2: segment.y2,
+      width,
+      color,
+      round: game.round
+    };
+
+    drawingHistory.push(clean);
+
+    if (drawingHistory.length > 12000) {
+      drawingHistory.shift();
+    }
+
+    socket.broadcast.emit("drawing-segment", clean);
+  });
+
+  socket.on("clear-drawing", () => {
+    if (game.status !== "drawing" ||
+        game.drawerId !== socket.id) return;
+
+    drawingHistory = [];
+    io.emit("drawing-cleared");
+  });
+
+  socket.on("guess", data => {
+    const player = players.get(socket.id);
+    if (!player || game.status !== "drawing") return;
+
+    const now = Date.now();
+
+    if (now - lastMessageTime < 500) return;
+    lastMessageTime = now;
+
+    const text = String(data?.text || "").trim().slice(0, 100);
+    if (!text) return;
+
+    if (game.drawerId === socket.id) return;
+
+    if (roundGuessed.has(socket.id)) return;
+
+    if (text.toLowerCase() === game.secretWord.toLowerCase()) {
+      roundGuessed.add(socket.id);
+      player.score += 10;
+
+      io.emit("chat-message", {
+        system: true,
+        text: player.username + " guessed correctly! +10 points!"
+      });
+
+      broadcastPlayers();
+
+      finishRound("Someone guessed correctly!");
+      return;
+    }
+
+    io.emit("chat-message", {
+      username: player.username,
+      text
+    });
+  });
+
+  socket.on("end-round", () => {
+    const player = players.get(socket.id);
+
+    if (!player || game.status !== "drawing") return;
+
+    if (game.drawerId !== socket.id && !player.isOwner) {
+      return;
+    }
+
+    finishRound("The round was ended.");
+  });
+
+  socket.on("disconnect", () => {
+    const player = players.get(socket.id);
+    if (!player) return;
+
+    players.delete(socket.id);
+
+    systemMessage(player.username + " left the game.");
+
+    broadcastPlayers();
+
+    if (game.status === "drawing" &&
+        game.drawerId === socket.id) {
+      finishRound("The drawer disconnected!");
+    }
+
+    if (players.size < 2 && game.status !== "waiting") {
+      clearInterval(timer);
+      game.status = "waiting";
+      game.drawerId = null;
+      game.drawerName = null;
+      game.secretWord = null;
+      game.endsAt = 0;
+      sendGameState();
+    }
+
+    if (players.size < 2) {
+      clearTimeout(nextRoundTimeout);
+    }
+
+    if (players.size >= 2 && game.status === "waiting") {
+      clearTimeout(nextRoundTimeout);
+      nextRoundTimeout = setTimeout(startRound, 1500);
+    }
+  });
+});
+
+server.listen(PORT, "0.0.0.0", () => {
+  console.log("Draw Battle server running on port " + PORT);
+});
+const answer = game.secretWord;
+
+game.status = "waiting";
+game.drawerId = null;const answer = game.secretWord;
+const previousDrawerId = game.drawerId;
+
+game.status = "waiting";
+game.drawerId = null;const online = [...players.values()];
+const previousIndex = online.findIndex(
+  p => p.id === game.drawerId
+);const online = [...players.values()];
+const previousIndex = online.findIndex(
+  p => p.id === previousDrawerId
+);
